@@ -16,7 +16,7 @@ import           PlutusTx             (compile, unstableMakeIsData)
 import           PlutusTx.Prelude     (Bool (..), traceIfFalse, ($), (&&))
 import           Utilities            (wrap)
 import Plutus.V2.Ledger.Contexts (txSignedBy)
-import Plutus.V1.Ledger.Interval (contains, after, overlaps)
+import Plutus.V1.Ledger.Interval (contains, after, overlaps, before)
 
 ---------------------------------------------------------------------------------------------------
 ----------------------------------- ON-CHAIN / VALIDATOR ------------------------------------------
@@ -52,7 +52,7 @@ mkVestingValidator _dat () _ctx =
         firstBeneficiaryDeadlineValid = contains (to $ deadline _dat) $ txInfoValidRange info
 
         secondBeneficiaryDeadlineValid :: Bool 
-        secondBeneficiaryDeadlineValid = overlaps (to $ deadline _dat) $ txInfoValidRange info
+        secondBeneficiaryDeadlineValid = before (deadline _dat) (txInfoValidRange info)
 
 
 
