@@ -4,15 +4,19 @@
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeApplications  #-}
 {-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Homework1 where
 
 import           Plutus.V2.Ledger.Api (BuiltinData, POSIXTime, PubKeyHash,
-                                       ScriptContext, Validator,
-                                       mkValidatorScript)
+                                       ScriptContext (scriptContextTxInfo),
+                                       Validator, mkValidatorScript, TxInfo (txInfoValidRange),
+                                       to, from)
 import           PlutusTx             (compile, unstableMakeIsData)
-import           PlutusTx.Prelude     (Bool (..))
+import           PlutusTx.Prelude     (Bool (..), traceIfFalse, ($), (&&))
 import           Utilities            (wrap)
+import Plutus.V2.Ledger.Contexts (txSignedBy)
+import Plutus.V1.Ledger.Interval (contains, after, overlaps)
 
 ---------------------------------------------------------------------------------------------------
 ----------------------------------- ON-CHAIN / VALIDATOR ------------------------------------------
@@ -29,7 +33,28 @@ unstableMakeIsData ''VestingDatum
 -- This should validate if either beneficiary1 has signed the transaction and the current slot is before or at the deadline
 -- or if beneficiary2 has signed the transaction and the deadline has passed.
 mkVestingValidator :: VestingDatum -> () -> ScriptContext -> Bool
-mkVestingValidator _dat () _ctx = False -- FIX ME!
+mkVestingValidator _dat () _ctx = 
+    if firstBeneficiaryDeadlineValid 
+        then signedByFirstBeneficiary    
+        else 
+            secondBeneficiaryDeadlineValid && signedBySecondBeneficiary
+    where
+        info :: TxInfo
+        info = scriptContextTxInfo _ctx
+
+        signedByFirstBeneficiary :: Bool
+        signedByFirstBeneficiary = txSignedBy info $ beneficiary1 _dat 
+
+        signedBySecondBeneficiary :: Bool
+        signedBySecondBeneficiary = txSignedBy info $ beneficiary2 _dat 
+
+        firstBeneficiaryDeadlineValid :: Bool 
+        firstBeneficiaryDeadlineValid = contains (to $ deadline _dat) $ txInfoValidRange info
+
+        secondBeneficiaryDeadlineValid :: Bool 
+        secondBeneficiaryDeadlineValid = overlaps (to $ deadline _dat) $ txInfoValidRange info
+
+
 
 {-# INLINABLE  mkWrappedVestingValidator #-}
 mkWrappedVestingValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
