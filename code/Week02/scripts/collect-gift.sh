@@ -1,7 +1,7 @@
 #!/bin/bash
 
-assets=code/Week02/assets
-keypath=keys
+assets=/workspace/code/Week02/assets
+keypath=/workspace/keys
 name="$1"
 collateral="$2"
 txin="$3"
